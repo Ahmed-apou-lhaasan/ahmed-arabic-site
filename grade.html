@@ -55,25 +55,28 @@
   async function loadLessons() {
     const box = document.getElementById("lessonsList");
     try {
-      const q = query(collection(db, "lessons"), where("grade", "==", grade), orderBy("order", "asc"));
+      const q = query(collection(db, "lessons"), where("grade", "==", grade));
       const snap = await getDocs(q);
       if (snap.empty) {
         box.innerHTML = "";
         document.getElementById("noLessons").classList.remove("hidden");
         return;
       }
+      const lessons = [];
+      snap.forEach(docu => lessons.push({ id: docu.id, ...docu.data() }));
+      lessons.sort((a, b) => (a.order || 0) - (b.order || 0));
       box.innerHTML = "";
-      snap.forEach(docu => {
-        const d = docu.data();
+      lessons.forEach(d => {
         const meta = typeMeta[d.type] || typeMeta.text;
         box.insertAdjacentHTML("beforeend", `
-          <a href="/lesson.html?id=${docu.id}" class="item-card">
+          <a href="/lesson.html?id=${d.id}" class="item-card">
             <span class="text-2xl">${meta.icon}</span>
             <div class="flex-1">
               <div class="font-bold">${escapeHtml(d.title || "بدون عنوان")}</div>
             </div>
             <span class="badge ${meta.cls}">${meta.label}</span>
           </a>`);
+      });
       });
     } catch (e) {
       box.innerHTML = `<p class="text-sm" style="color:var(--danger)">تعذّر تحميل الدروس. تأكد من إعداد Firebase بشكل صحيح.</p>`;

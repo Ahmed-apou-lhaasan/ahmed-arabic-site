@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة التحكم | الأستاذ أحمد</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
+    <div class="flex items-center gap-3">
+      <span class="brand-mark">أ</span>
+      <div class="font-bold">لوحة تحكم المعلم</div>
+    </div>
+    <button id="logoutBtn" class="nav-link">خروج ⏻</button>
+  </div>
+  <nav class="max-w-6xl mx-auto px-4 flex gap-1 overflow-x-auto">
+    <button class="tab-btn active" data-tab="lessons">📘 الدروس</button>
+    <button class="tab-btn" data-tab="exams">📝 الامتحانات</button>
+    <button class="tab-btn" data-tab="students">👥 الطلاب</button>
+    <button class="tab-btn" data-tab="attendance">🗓️ الحضور والغياب</button>
+  </nav>
+</header>
+
+<main class="max-w-4xl mx-auto px-4 py-8">
+
+  <!-- ===================== تبويب الدروس ===================== -->
+  <section id="tab-lessons" class="tab-panel flex flex-col gap-8">
+    <div class="p-5 rounded-2xl" style="background:#fff;border:1px solid var(--line)">
+      <h2 class="font-bold text-lg mb-4">إضافة / تعديل درس</h2>
+      <form id="lessonForm" class="grid sm:grid-cols-2 gap-4">
+        <input type="hidden" id="lesson_id">
+        <div class="sm:col-span-2">
+          <label class="field-label">عنوان الدرس</label>
+          <input id="lesson_title" required class="field">
+        </div>
+        <div>
+          <label class="field-label">القسم / المرحلة</label>
+          <select id="lesson_grade" class="field">
+            <option value="1">الأول الإعدادي</option>
+            <option value="2">الثاني الإعدادي</option>
+            <option value="3">الثالث الإعدادي</option>
+            <option value="grammar">النحو والبلاغة</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">نوع المحتوى</label>
+          <select id="lesson_type" class="field">
+            <option value="text">نص مباشر</option>
+            <option value="video">فيديو (رابط يوتيوب)</option>
+            <option value="pdf">ملف PDF (رابط)</option>
+          </select>
+        </div>
+        <div class="sm:col-span-2">
+          <label class="field-label">المحتوى (نص الدرس، أو رابط الفيديو/الملف)</label>
+          <textarea id="lesson_content" rows="4" required class="field"></textarea>
+        </div>
+        <div>
+          <label class="field-label">ترتيب الظهور (رقم)</label>
+          <input id="lesson_order" type="number" value="1" class="field">
+        </div>
+        <div class="sm:col-span-2 flex gap-3">
+          <button type="submit" class="btn btn-primary">حفظ الدرس</button>
+          <button type="button" id="lessonCancelEdit" class="btn btn-outline hidden">إلغاء التعديل</button>
+        </div>
+      </form>
+    </div>
+
+    <div>
+      <h2 class="font-bold text-lg mb-3">الدروس الحالية</h2>
+      <div id="lessonsAdminList" class="flex flex-col gap-2"></div>
+    </div>
+  </section>
+
+  <!-- ===================== تبويب الامتحانات ===================== -->
+  <section id="tab-exams" class="tab-panel hidden flex-col gap-8">
+    <div class="p-5 rounded-2xl" style="background:#fff;border:1px solid var(--line)">
+      <h2 class="font-bold text-lg mb-4">إنشاء / تعديل امتحان</h2>
+      <form id="examForm" class="flex flex-col gap-4">
+        <input type="hidden" id="exam_id">
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label class="field-label">عنوان الامتحان</label>
+            <input id="exam_title" required class="field">
+          </div>
+          <div>
+            <label class="field-label">القسم / المرحلة</label>
+            <select id="exam_grade" class="field">
+              <option value="1">الأول الإعدادي</option>
+              <option value="2">الثاني الإعدادي</option>
+              <option value="3">الثالث الإعدادي</option>
+              <option value="grammar">النحو والبلاغة</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="questionsBuilder" class="flex flex-col gap-4"></div>
+        <button type="button" id="addQuestionBtn" class="btn btn-outline self-start">+ إضافة سؤال</button>
+
+        <div class="flex gap-3">
+          <button type="submit" class="btn btn-primary">حفظ الامتحان</button>
+          <button type="button" id="examCancelEdit" class="btn btn-outline hidden">إلغاء التعديل</button>
+        </div>
+      </form>
+    </div>
+
+    <div>
+      <h2 class="font-bold text-lg mb-3">الامتحانات الحالية</h2>
+      <div id="examsAdminList" class="flex flex-col gap-2"></div>
+    </div>
+  </section>
+
+  <!-- ===================== تبويب الطلاب ===================== -->
+  <section id="tab-students" class="tab-panel hidden flex-col gap-8">
+    <div class="p-5 rounded-2xl" style="background:#fff;border:1px solid var(--line)">
+      <h2 class="font-bold text-lg mb-4">إضافة طالب</h2>
+      <form id="studentForm" class="grid sm:grid-cols-3 gap-4">
+        <div class="sm:col-span-2">
+          <label class="field-label">اسم الطالب</label>
+          <input id="student_name" required class="field">
+        </div>
+        <div>
+          <label class="field-label">المرحلة</label>
+          <select id="student_grade" class="field">
+            <option value="1">الأول الإعدادي</option>
+            <option value="2">الثاني الإعدادي</option>
+            <option value="3">الثالث الإعدادي</option>
+          </select>
+        </div>
+        <div class="sm:col-span-3">
+          <button type="submit" class="btn btn-primary">إضافة الطالب</button>
+        </div>
+      </form>
+    </div>
+    <div>
+      <h2 class="font-bold text-lg mb-3">قائمة الطلاب</h2>
+      <div id="studentsAdminList" class="flex flex-col gap-2"></div>
+    </div>
+  </section>
+
+  <!-- ===================== تبويب الحضور والغياب ===================== -->
+  <section id="tab-attendance" class="tab-panel hidden flex-col gap-8">
+    <div class="p-5 rounded-2xl" style="background:#fff;border:1px solid var(--line)">
+      <h2 class="font-bold text-lg mb-4">تسجيل غياب اليوم</h2>
+      <div class="grid sm:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="field-label">المرحلة</label>
+          <select id="att_grade" class="field">
+            <option value="1">الأول الإعدادي</option>
+            <option value="2">الثاني الإعدادي</option>
+            <option value="3">الثالث الإعدادي</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">التاريخ</label>
+          <input id="att_date" type="date" class="field">
+        </div>
+      </div>
+      <div id="attendanceStudentList" class="flex flex-col gap-2 mb-4"></div>
+      <button id="saveAttendanceBtn" class="btn btn-primary">حفظ الغياب</button>
+      <p id="attendanceSavedMsg" class="hidden text-sm mt-2" style="color:var(--success)">تم حفظ الغياب بنجاح ✔</p>
+    </div>
+
+    <div>
+      <h2 class="font-bold text-lg mb-3">سجل الغياب السابق</h2>
+      <div id="attendanceHistory" class="flex flex-col gap-2"></div>
+    </div>
+  </section>
+
+</main>
+
+<script type="module" src="/assets/js/admin-dashboard.js"></script>
+</body>
+</html>

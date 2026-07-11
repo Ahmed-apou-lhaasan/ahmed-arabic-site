@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الدروس والامتحانات | منصة الأستاذ أحمد</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+<div id="app-header"></div>
+
+<main class="max-w-4xl mx-auto px-4 py-8">
+  <h1 id="pageTitle" class="display text-3xl mb-1">...</h1>
+  <p class="mb-8" style="color:var(--ink-2)">اختر درساً لتبدأ، أو ادخل امتحاناً لاختبار نفسك</p>
+
+  <section class="mb-10">
+    <h2 class="text-xl font-bold mb-3" style="color:var(--ink-2)">📘 الدروس</h2>
+    <div id="lessonsList" class="flex flex-col gap-3">
+      <div class="item-card skeleton h-16"></div>
+      <div class="item-card skeleton h-16"></div>
+    </div>
+    <p id="noLessons" class="hidden text-sm opacity-60 mt-2">لا توجد دروس مضافة بعد في هذا القسم.</p>
+  </section>
+
+  <section>
+    <h2 class="text-xl font-bold mb-3" style="color:var(--ink-2)">📝 الامتحانات</h2>
+    <div id="examsList" class="flex flex-col gap-3">
+      <div class="item-card skeleton h-16"></div>
+    </div>
+    <p id="noExams" class="hidden text-sm opacity-60 mt-2">لا توجد امتحانات مضافة بعد في هذا القسم.</p>
+  </section>
+</main>
+
+<div id="app-footer"></div>
+
+<script type="module">
+  import { mountLayout, GRADE_LABELS, escapeHtml } from "/assets/js/main.js";
+  import { db, collection, getDocs, query, where, orderBy } from "/assets/js/firebase-config.js";
+
+  mountLayout();
+
+  const params = new URLSearchParams(location.search);
+  const grade = params.get("grade") || "1";
+  document.getElementById("pageTitle").textContent = GRADE_LABELS[grade] || "الدروس";
+
+  const typeMeta = {
+    video: { label: "فيديو", cls: "badge-video", icon: "🎬" },
+    pdf:   { label: "PDF",   cls: "badge-pdf",   icon: "📄" },
+    text:  { label: "نص",    cls: "badge-text",  icon: "📖" }
+  };
+
+  async function loadLessons() {
+    const box = document.getElementById("lessonsList");
+    try {
+      const q = query(collection(db, "lessons"), where("grade", "==", grade), orderBy("order", "asc"));
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        box.innerHTML = "";
+        document.getElementById("noLessons").classList.remove("hidden");
+        return;
+      }
+      box.innerHTML = "";
+      snap.forEach(docu => {
+        const d = docu.data();
+        const meta = typeMeta[d.type] || typeMeta.text;
+        box.insertAdjacentHTML("beforeend", `
+          <a href="/lesson.html?id=${docu.id}" class="item-card">
+            <span class="text-2xl">${meta.icon}</span>
+            <div class="flex-1">
+              <div class="font-bold">${escapeHtml(d.title || "بدون عنوان")}</div>
+            </div>
+            <span class="badge ${meta.cls}">${meta.label}</span>
+          </a>`);
+      });
+    } catch (e) {
+      box.innerHTML = `<p class="text-sm" style="color:var(--danger)">تعذّر تحميل الدروس. تأكد من إعداد Firebase بشكل صحيح.</p>`;
+      console.error(e);
+    }
+  }
+
+  async function loadExams() {
+    const box = document.getElementById("examsList");
+    try {
+      const q = query(collection(db, "exams"), where("grade", "==", grade));
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        box.innerHTML = "";
+        document.getElementById("noExams").classList.remove("hidden");
+        return;
+      }
+      box.innerHTML = "";
+      snap.forEach(docu => {
+        const d = docu.data();
+        box.insertAdjacentHTML("beforeend", `
+          <a href="/exam.html?id=${docu.id}" class="item-card">
+            <span class="text-2xl">📝</span>
+            <div class="flex-1">
+              <div class="font-bold">${escapeHtml(d.title || "امتحان")}</div>
+              <div class="text-xs opacity-60">${(d.questions || []).length} سؤال</div>
+            </div>
+            <span class="badge badge-exam">ابدأ الامتحان</span>
+          </a>`);
+      });
+    } catch (e) {
+      box.innerHTML = `<p class="text-sm" style="color:var(--danger)">تعذّر تحميل الامتحانات.</p>`;
+      console.error(e);
+    }
+  }
+
+  loadLessons();
+  loadExams();
+</script>
+</body>
+</html>

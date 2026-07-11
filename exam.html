@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>امتحان | منصة الأستاذ أحمد</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+<div id="app-header"></div>
+
+<main class="max-w-2xl mx-auto px-4 py-8">
+  <a id="backLink" href="/index.html" class="text-sm" style="color:var(--gold)">→ الرجوع للقسم</a>
+  <h1 id="examTitle" class="display text-3xl my-4">جاري التحميل...</h1>
+
+  <!-- شاشة إدخال اسم الطالب -->
+  <div id="nameGate" class="hidden mb-6">
+    <label class="field-label">اكتب اسمك قبل بدء الامتحان</label>
+    <input id="studentName" class="field" placeholder="الاسم بالكامل">
+  </div>
+
+  <form id="examForm" class="flex flex-col gap-6"></form>
+
+  <div class="mt-6 flex items-center gap-3">
+    <button id="submitBtn" class="btn btn-primary hidden">تسليم الامتحان</button>
+  </div>
+
+  <div id="resultBox" class="hidden mt-8 p-6 rounded-2xl text-center" style="background:var(--paper-2); border:1px solid var(--line)">
+    <div class="text-sm mb-1" style="color:var(--ink-2)">نتيجتك</div>
+    <div id="scoreText" class="display text-4xl"></div>
+  </div>
+</main>
+
+<div id="app-footer"></div>
+
+<script type="module">
+  import { mountLayout, escapeHtml } from "/assets/js/main.js";
+  import { db, doc, getDoc } from "/assets/js/firebase-config.js";
+
+  mountLayout();
+
+  const id = new URLSearchParams(location.search).get("id");
+  const titleEl = document.getElementById("examTitle");
+  const form = document.getElementById("examForm");
+  const submitBtn = document.getElementById("submitBtn");
+  let examData = null;
+
+  async function load() {
+    if (!id) { titleEl.textContent = "لم يتم تحديد الامتحان"; return; }
+    try {
+      const snap = await getDoc(doc(db, "exams", id));
+      if (!snap.exists()) { titleEl.textContent = "الامتحان غير موجود"; return; }
+      examData = snap.data();
+      document.getElementById("backLink").href = `/grade.html?grade=${examData.grade}`;
+      titleEl.textContent = examData.title || "امتحان";
+      document.getElementById("nameGate").classList.remove("hidden");
+
+      (examData.questions || []).forEach((q, i) => {
+        const opts = q.type === "tf" ? ["صح", "خطأ"] : (q.options || []);
+        const optionsHtml = opts.map((opt, oi) => `
+          <label class="option-row">
+            <input type="radio" name="q${i}" value="${oi}" class="accent-current">
+            <span>${escapeHtml(opt)}</span>
+          </label>`).join("");
+
+        form.insertAdjacentHTML("beforeend", `
+          <fieldset data-qindex="${i}" class="border-0 p-0">
+            <legend class="font-bold mb-3">${i + 1}. ${escapeHtml(q.text || "")}</legend>
+            <div class="flex flex-col gap-2">${optionsHtml}</div>
+          </fieldset>`);
+      });
+      submitBtn.classList.remove("hidden");
+    } catch (e) {
+      titleEl.textContent = "حدث خطأ في التحميل";
+      console.error(e);
+    }
+  }
+
+  submitBtn.addEventListener("click", () => {
+    const nameInput = document.getElementById("studentName");
+    if (nameInput && !nameInput.value.trim()) {
+      nameInput.focus();
+      nameInput.classList.add("ring-2");
+      return;
+    }
+    let correct = 0;
+    const questions = examData.questions || [];
+    questions.forEach((q, i) => {
+      const chosen = form.querySelector(`input[name="q${i}"]:checked`);
+      const fieldset = form.querySelector(`fieldset[data-qindex="${i}"]`);
+      fieldset.querySelectorAll("input").forEach(inp => inp.disabled = true);
+      const chosenVal = chosen ? Number(chosen.value) : -1;
+      const isCorrect = chosenVal === q.correctIndex;
+      if (isCorrect) correct++;
+      fieldset.querySelectorAll(".option-row").forEach((row, oi) => {
+        if (oi === q.correctIndex) row.classList.add("result-correct");
+        else if (oi === chosenVal && !isCorrect) row.classList.add("result-wrong");
+      });
+    });
+    submitBtn.classList.add("hidden");
+    const pct = questions.length ? Math.round((correct / questions.length) * 100) : 0;
+    document.getElementById("resultBox").classList.remove("hidden");
+    document.getElementById("scoreText").textContent = `${correct} / ${questions.length} (${pct}%)`;
+    document.getElementById("resultBox").scrollIntoView({ behavior: "smooth" });
+  });
+
+  load();
+</script>
+</body>
+</html>

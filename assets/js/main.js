@@ -37,14 +37,43 @@ export function renderHeader(activeGrade = "") {
 
 export function renderFooter() {
   const year = new Date().getFullYear();
+  const student = getStudentSession();
+  const studentLinks = student
+    ? `<div class="text-xs mt-2">
+         مرحباً <span class="font-bold">${escapeHtml(student.name)}</span> ·
+         <a href="/results.html" class="opacity-70 hover:opacity-100">نتائجي</a> ·
+         <a href="#" id="studentLogoutLink" class="opacity-70 hover:opacity-100">خروج</a>
+       </div>`
+    : `<a href="/student-login.html" class="opacity-40 hover:opacity-80 text-xs">دخول الطالب</a>`;
   return `
   <footer class="mt-16 border-t" style="border-color:var(--line)">
     <div class="max-w-6xl mx-auto px-4 py-8 text-center text-sm" style="color:var(--ink-2)">
       <div class="font-bold mb-1">أ / أحمد أبوالحسن — معلم لغة عربية</div>
       <div class="opacity-70">جميع الحقوق محفوظة © ${year}</div>
       <a href="/admin/login.html" class="opacity-40 hover:opacity-80 text-xs">لوحة التحكم</a>
+      ${studentLinks}
     </div>
   </footer>`;
+}
+
+/* ============== جلسة تسجيل دخول الطالب (بدون Firebase Auth) ============== */
+const STUDENT_SESSION_KEY = "studentSession";
+
+export function getStudentSession() {
+  try {
+    const raw = localStorage.getItem(STUDENT_SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setStudentSession(data) {
+  localStorage.setItem(STUDENT_SESSION_KEY, JSON.stringify(data));
+}
+
+export function clearStudentSession() {
+  localStorage.removeItem(STUDENT_SESSION_KEY);
 }
 
 export function mountLayout() {
@@ -53,6 +82,14 @@ export function mountLayout() {
   const btn = document.getElementById("menuBtn");
   const menu = document.getElementById("mobileMenu");
   if (btn) btn.addEventListener("click", () => menu.classList.toggle("hidden"));
+  const logoutLink = document.getElementById("studentLogoutLink");
+  if (logoutLink) {
+    logoutLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      clearStudentSession();
+      location.href = "/index.html";
+    });
+  }
 }
 
 export function escapeHtml(str = "") {

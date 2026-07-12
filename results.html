@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نتائجي | منصة الأستاذ أحمد</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+<div id="app-header"></div>
+
+<main class="max-w-2xl mx-auto px-4 py-8">
+  <h1 class="display text-3xl mb-1">نتائجي</h1>
+  <p id="studentNameLine" class="mb-8" style="color:var(--ink-2)"></p>
+
+  <div id="resultsList" class="flex flex-col gap-3">
+    <div class="item-card skeleton h-16"></div>
+  </div>
+  <p id="noResults" class="hidden text-sm opacity-60 mt-2">لسه ما حليتش أي امتحان.</p>
+  <p id="notLoggedIn" class="hidden text-sm mt-2">
+    لازم تسجل دخولك الأول. <a href="/student-login.html" class="font-bold" style="color:var(--gold)">دخول الطالب</a>
+  </p>
+</main>
+
+<div id="app-footer"></div>
+
+<script type="module">
+  import { mountLayout, getStudentSession, escapeHtml } from "/assets/js/main.js";
+  import { db, collection, getDocs, query, where } from "/assets/js/firebase-config.js";
+
+  mountLayout();
+
+  const session = getStudentSession();
+  const box = document.getElementById("resultsList");
+
+  async function load() {
+    if (!session) {
+      box.innerHTML = "";
+      document.getElementById("notLoggedIn").classList.remove("hidden");
+      return;
+    }
+    document.getElementById("studentNameLine").textContent = `مرحباً ${session.name} — نتائج امتحاناتك السابقة`;
+    try {
+      const q = query(collection(db, "examResults"), where("studentId", "==", session.id));
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        box.innerHTML = "";
+        document.getElementById("noResults").classList.remove("hidden");
+        return;
+      }
+      const results = [];
+      snap.forEach(docu => results.push(docu.data()));
+      results.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      box.innerHTML = "";
+      results.forEach(r => {
+        const pct = r.total ? Math.round((r.score / r.total) * 100) : 0;
+        const date = r.createdAt ? new Date(r.createdAt).toLocaleDateString("ar-EG") : "";
+        box.insertAdjacentHTML("beforeend", `
+          <div class="item-card">
+            <div class="flex-1">
+              <div class="font-bold">${escapeHtml(r.examTitle || "امتحان")}</div>
+              <div class="text-xs opacity-60">${date}</div>
+            </div>
+            <span class="badge badge-exam">${r.score} / ${r.total} (${pct}%)</span>
+          </div>`);
+      });
+    } catch (e) {
+      box.innerHTML = `<p class="text-sm" style="color:var(--danger)">تعذّر تحميل النتائج.</p>`;
+      console.error(e);
+    }
+  }
+  load();
+</script>
+</body>
+</html>

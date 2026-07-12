@@ -248,17 +248,11 @@ const studentForm = document.getElementById("studentForm");
 const studentsAdminList = document.getElementById("studentsAdminList");
 
 async function loadStudentsAdmin() {
-  studentsAdminList.innerHTML = `<div class="item-card skeleton h-14"></div>`;
-  const snap = await getDocs(collection(db, "students"));
-  if (snap.empty) { studentsAdminList.innerHTML = `<p class="text-sm opacity-60">لا يوجد طلاب مسجلون بعد.</p>`; return; }
-  studentsAdminList.innerHTML = "";
-  snap.forEach(docu => {
-    const d = docu.data();
-    studentsAdminList.insertAdjacentHTML("beforeend", `
+  studentsAdminList.insertAdjacentHTML("beforeend", `
       <div class="item-card">
         <div class="flex-1">
           <div class="font-bold">${escapeHtml(d.name)}</div>
-          <div class="text-xs opacity-60">${GRADE_LABELS[d.grade] || d.grade}</div>
+          <div class="text-xs opacity-60">${GRADE_LABELS[d.grade] || d.grade} · الكود: <span class="font-bold" style="color:var(--gold)">${escapeHtml(String(d.code || "—"))}</span></div>
         </div>
         <button class="btn btn-danger btn-sm" data-del="${docu.id}">حذف</button>
       </div>`);
@@ -272,13 +266,16 @@ async function loadStudentsAdmin() {
 
 studentForm.addEventListener("submit", async (e) => {
   e.preventDefault();
+  const code = String(Math.floor(1000 + Math.random() * 9000));
   await addDoc(collection(db, "students"), {
     name: document.getElementById("student_name").value.trim(),
     grade: document.getElementById("student_grade").value,
+    code,
     createdAt: Date.now()
   });
   studentForm.reset();
   loadStudentsAdmin();
+  alert(`تم إضافة الطالب بنجاح. الكود السري الخاص به: ${code}\nاكتبه وسلّمه للطالب.`);
 });
 
 /* =====================================================================

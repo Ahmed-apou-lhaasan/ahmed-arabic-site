@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ترتيب الطلاب | منصة الأستاذ أحمد</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+<div id="app-header"></div>
+
+<main class="max-w-2xl mx-auto px-4 py-8">
+  <h1 class="display text-3xl mb-1">🏆 ترتيب الطلاب</h1>
+  <p class="mb-6" style="color:var(--ink-2)">أعلى الطلاب في متوسط نتائج الامتحانات</p>
+
+  <div class="grid sm:grid-cols-2 gap-4 mb-6">
+    <div>
+      <label class="field-label">المرحلة</label>
+      <select id="lb_grade" class="field">
+        <option value="1">الأول الإعدادي</option>
+        <option value="2">الثاني الإعدادي</option>
+        <option value="3">الثالث الإعدادي</option>
+        <option value="grammar">النحو والبلاغة</option>
+      </select>
+    </div>
+    <div>
+      <label class="field-label">عدد الطلاب المعروضين</label>
+      <select id="lb_count" class="field">
+        <option value="3">أفضل 3</option>
+        <option value="5" selected>أفضل 5</option>
+        <option value="10">أفضل 10</option>
+        <option value="9999">عرض الكل</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="lbList" class="flex flex-col gap-3">
+    <div class="item-card skeleton h-16"></div>
+  </div>
+  <p id="lbEmpty" class="hidden text-sm opacity-60 mt-2">لا توجد نتائج كافية بعد لعرض الترتيب.</p>
+</main>
+
+<div id="app-footer"></div>
+
+<script type="module">
+  import { mountLayout, escapeHtml, GRADE_LABELS } from "/assets/js/main.js";
+  import { db, collection, getDocs, query, where } from "/assets/js/firebase-config.js";
+
+  mountLayout();
+
+  const gradeSel = document.getElementById("lb_grade");
+  const countSel = document.getElementById("lb_count");
+  const list = document.getElementById("lbList");
+  const emptyMsg = document.getElementById("lbEmpty");
+
+  const medal = ["🥇", "🥈", "🥉"];
+
+  async function loadLeaderboard() {
+    list.innerHTML = `<div class="item-card skeleton h-16"></div>`;
+    emptyMsg.classList.add("hidden");
+    try {
+      const q = query(collection(db, "examResults"), where("grade", "==", gradeSel.value));
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        list.innerHTML = "";
+        emptyMsg.classList.remove("hidden");
+        return;
+      }
+      const byStudent = {};
+      snap.forEach(docu => {
+        const r = docu.data();
+        const key = r.studentId || r.studentName;
+        if (!byStudent[key]) {
+          byStudent[key] = { name: r.studentName || "طالب", totalScore: 0, totalPossible: 0, examCount: 0 };
+        }
+        byStudent[key].totalScore += Number(r.score) || 0;
+        byStudent[key].totalPossible += Number(r.total) || 0;
+        byStudent[key].examCount += 1;
+      });
+
+      const rows = Object.values(byStudent)
+        .filter(s => s.totalPossible > 0)
+        .map(s => ({ ...s, pct: Math.round((s.totalScore / s.totalPossible) * 100) }))
+        .sort((a, b) => b.pct - a.pct || b.examCount - a.examCount);
+
+      if (rows.length === 0) {
+        list.innerHTML = "";
+        emptyMsg.classList.remove("hidden");
+        return;
+      }
+
+      const topN = Number(countSel.value);
+      const shown = rows.slice(0, topN);
+
+      list.innerHTML = "";
+      shown.forEach((s, i) => {
+        list.insertAdjacentHTML("beforeend", `
+          <div class="item-card">
+            <span class="text-2xl">${medal[i] || (i + 1)}</span>
+            <div class="flex-1">
+              <div class="font-bold">${escapeHtml(s.name)}</div>
+              <div class="text-xs opacity-60">${s.examCount} امتحان</div>
+            </div>
+            <span class="badge badge-exam">${s.pct}%</span>
+          </div>`);
+      });
+    } catch (e) {
+      list.innerHTML = `<p class="text-sm" style="color:var(--danger)">تعذّر تحميل الترتيب.</p>`;
+      console.error(e);
+    }
+  }
+
+  gradeSel.addEventListener("change", loadLeaderboard);
+  countSel.addEventListener("change", loadLeaderboard);
+  loadLeaderboard();
+</script>
+</body>
+</html>

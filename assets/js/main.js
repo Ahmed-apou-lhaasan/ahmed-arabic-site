@@ -51,7 +51,10 @@ export function renderFooter() {
       <div class="font-bold mb-1">أ / أحمد أبوالحسن — معلم لغة عربية</div>
       <div class="opacity-70 mb-1">للتواصل: 01029307604</div>
       <div class="opacity-70">جميع الحقوق محفوظة © ${year}</div>
-      <a href="/admin/login.html" class="opacity-40 hover:opacity-80 text-xs">لوحة التحكم</a>
+<a href="/admin/login.html" class="opacity-40 hover:opacity-80 text-xs">لوحة التحكم</a>
+      <div class="text-xs mt-1">
+        <a href="/leaderboard.html" class="opacity-70 hover:opacity-100">🏆 ترتيب الطلاب</a>
+      </div>
       ${studentLinks}
     </div>
   </footer>`;

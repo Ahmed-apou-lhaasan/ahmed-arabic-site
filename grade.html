@@ -25,6 +25,14 @@
     <p id="noLessons" class="hidden text-sm opacity-60 mt-2">لا توجد دروس مضافة بعد في هذا القسم.</p>
   </section>
 
+  <section class="mb-10">
+    <h2 class="text-xl font-bold mb-3" style="color:var(--ink-2)">📚 الواجبات</h2>
+    <div id="homeworkList" class="flex flex-col gap-3">
+      <div class="item-card skeleton h-16"></div>
+    </div>
+    <p id="noHomework" class="hidden text-sm opacity-60 mt-2">لا توجد واجبات مضافة بعد في هذا القسم.</p>
+  </section>
+
   <section>
     <h2 class="text-xl font-bold mb-3" style="color:var(--ink-2)">📝 الامتحانات</h2>
     <div id="examsList" class="flex flex-col gap-3">
@@ -112,7 +120,40 @@
     }
   }
 
+  async function loadHomework() {
+    const box = document.getElementById("homeworkList");
+    try {
+      const q = query(collection(db, "homework"), where("grade", "==", grade));
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        box.innerHTML = "";
+        document.getElementById("noHomework").classList.remove("hidden");
+        return;
+      }
+      const rows = [];
+      snap.forEach(docu => rows.push(docu.data()));
+      rows.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      box.innerHTML = "";
+      rows.forEach(d => {
+        const dueLine = d.dueDate ? `<div class="text-xs opacity-60 mt-1">آخر موعد للتسليم: ${escapeHtml(d.dueDate)}</div>` : "";
+        box.insertAdjacentHTML("beforeend", `
+          <div class="item-card items-start">
+            <span class="text-2xl">📚</span>
+            <div class="flex-1">
+              <div class="font-bold">${escapeHtml(d.title || "واجب")}</div>
+              <div class="text-sm mt-1 whitespace-pre-wrap" style="color:var(--ink-2)">${escapeHtml(d.content || "")}</div>
+              ${dueLine}
+            </div>
+          </div>`);
+      });
+    } catch (e) {
+      box.innerHTML = `<p class="text-sm" style="color:var(--danger)">تعذّر تحميل الواجبات.</p>`;
+      console.error(e);
+    }
+  }
+
   loadLessons();
+  loadHomework();
   loadExams();
 </script>
 </body>

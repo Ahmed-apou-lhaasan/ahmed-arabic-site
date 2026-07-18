@@ -14,7 +14,7 @@
     <div class="text-center mb-6">
       <span class="brand-mark mx-auto mb-3" style="display:flex">أ</span>
       <h1 class="display text-2xl">دخول الطالب</h1>
-      <p class="text-sm opacity-60">اختر مرحلتك واسمك واكتب الكود اللي معاك</p>
+      <p class="text-sm opacity-60">اختر مرحلتك واكتب اسمك والكود اللي معاك</p>
     </div>
     <form id="loginForm" class="flex flex-col gap-4">
       <div>
@@ -28,9 +28,7 @@
       </div>
       <div>
         <label class="field-label">اسمك</label>
-        <select id="studentSelect" class="field" required disabled>
-          <option value="">اختر المرحلة أولاً</option>
-        </select>
+        <input id="studentNameInput" class="field" placeholder="اكتب اسمك بالكامل" required>
       </div>
       <div>
         <label class="field-label">الكود السري</label>
@@ -43,57 +41,51 @@
 
 <script type="module">
   import { db, collection, getDocs, query, where } from "/assets/js/firebase-config.js";
-  import { setStudentSession, escapeHtml } from "/assets/js/main.js";
+  import { setStudentSession } from "/assets/js/main.js";
 
   const gradeSel = document.getElementById("grade");
-  const studentSel = document.getElementById("studentSelect");
+  const nameInput = document.getElementById("studentNameInput");
   const errorMsg = document.getElementById("errorMsg");
-  let studentsCache = [];
 
-  gradeSel.addEventListener("change", async () => {
-    studentSel.innerHTML = `<option value="">جاري التحميل...</option>`;
-    studentSel.disabled = true;
+  document.getElementById("loginForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorMsg.classList.add("hidden");
     if (!gradeSel.value) {
-      studentSel.innerHTML = `<option value="">اختر المرحلة أولاً</option>`;
+      errorMsg.textContent = "اختر المرحلة أولاً";
+      errorMsg.classList.remove("hidden");
       return;
     }
+    const typedName = nameInput.value.trim();
+    const code = document.getElementById("code").value.trim();
+    if (!typedName || !code) return;
+
     try {
       const q = query(collection(db, "students"), where("grade", "==", gradeSel.value));
       const snap = await getDocs(q);
-      studentsCache = [];
-      snap.forEach(docu => studentsCache.push({ id: docu.id, ...docu.data() }));
-      studentsCache.sort((a, b) => (a.name || "").localeCompare(b.name || "", "ar"));
-      if (studentsCache.length === 0) {
-        studentSel.innerHTML = `<option value="">لا يوجد طلاب مسجلين في هذه المرحلة</option>`;
-        studentSel.disabled = true;
+      let chosen = null;
+      snap.forEach(docu => {
+        const d = docu.data();
+        if ((d.name || "").trim().toLowerCase() === typedName.toLowerCase()) {
+          chosen = { id: docu.id, ...d };
+        }
+      });
+      if (!chosen) {
+        errorMsg.textContent = "لم يتم العثور على اسمك في هذه المرحلة، تأكد من كتابته بالضبط كما سجّله المعلم";
+        errorMsg.classList.remove("hidden");
         return;
       }
-      studentSel.innerHTML = `<option value="">اختر اسمك</option>` +
-        studentsCache.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
-      studentSel.disabled = false;
-    } catch (e) {
-      studentSel.innerHTML = `<option value="">تعذر تحميل الأسماء</option>`;
-      console.error(e);
-    }
-  });
-
-  document.getElementById("loginForm").addEventListener("submit", (e) => {
-    e.preventDefault();
-    errorMsg.classList.add("hidden");
-    const chosen = studentsCache.find(s => s.id === studentSel.value);
-    const code = document.getElementById("code").value.trim();
-    if (!chosen) {
-      errorMsg.textContent = "اختر اسمك من القائمة";
+      if (String(chosen.code || "") !== code) {
+        errorMsg.textContent = "الكود السري غير صحيح";
+        errorMsg.classList.remove("hidden");
+        return;
+      }
+      setStudentSession({ id: chosen.id, name: chosen.name, grade: chosen.grade });
+      location.href = `/grade.html?grade=${chosen.grade}`;
+    } catch (err) {
+      errorMsg.textContent = "حدث خطأ، حاول مرة أخرى";
       errorMsg.classList.remove("hidden");
-      return;
+      console.error(err);
     }
-    if (String(chosen.code || "") !== code) {
-      errorMsg.textContent = "الكود السري غير صحيح";
-      errorMsg.classList.remove("hidden");
-      return;
-    }
-    setStudentSession({ id: chosen.id, name: chosen.name, grade: chosen.grade });
-    location.href = `/grade.html?grade=${chosen.grade}`;
   });
 </script>
 </body>
